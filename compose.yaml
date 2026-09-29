@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: portpulse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: portpulse
+      POSTGRES_USER: port5432
+      POSTGRES_PASSWORD: portpulse1992
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - portpulse-postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -u port5432 -d portpulse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  portpulse-postgres-data:
+
+

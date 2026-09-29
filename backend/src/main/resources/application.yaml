@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: port_pulse
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/portpulse
+    username: port5432
+    password: portpulse1992
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  logging:
+    lever:
+      root: INFO
+      com.portpulse: DEBUG
+    file:
+      name: logs/portpulse.log
+
+server: 8080
