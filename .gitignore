@@ -39,3 +39,60 @@ out/
 .env
 __pycache__/
 *.pyc
+### Logs ###
+logs/
+*.log
+
+### Reports / generated outputs ###
+reports/
+report/
+output/
+outputs/
+exports/
+*.csv
+*.xlsx
+*.parquet
+
+### Temporary / cache ###
+tmp/
+temp/
+.cache/
+*.tmp
+*.bak
+*.swp
+
+### Python ###
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+### Virtual environment ###
+.venv/
+.venv2/
+venv/
+env/
+
+### Environment / secrets ###
+.env
+.env.*
+!.env.example
+
+### Database / local data ###
+data/
+local_data/
+*.db
+*.sqlite
+*.sqlite3
+
+### OS ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Coverage / test outputs ###
+.coverage
+coverage.xml
+htmlcov/
