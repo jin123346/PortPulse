@@ -8,14 +8,33 @@ from config.setting import SQL_DIR
 from db.postgres import get_connection
 
 logger = logging.getLogger(__name__)
-
+FACT_SHIP_CALL_SQL = "fact_ship_call_load.sql"
+FACT_CONTROL_EVENT_SQL = "fact_control_event_load.sql"
+VESSEL_KIND_SQL="check_vssl_kind_update.sql"
 # 선박 종류 데이터 새로 생긴거 있는지 없는지 체크 -> 있으면 insert, 없으면 pass
+
+def _run_sql_file(conn, filename: str) -> float:
+    """SQL 파일 하나 실행 후 걸린 시간(초)을 돌려줌. 실패하면 rollback 후 예외를 다시 올림."""
+    sql = (SQL_DIR / filename).read_text(encoding="utf-8")
+    logger.info("%s 실행", filename)
+    start = time.perf_counter()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        logger.exception("%s 실행 중 오류 발생", filename)
+        raise
+    elapsed = round(time.perf_counter() - start, 1)
+    logger.info("%s 완료 (%.1f초)", filename, elapsed)
+    return elapsed
 
 def check_vssl_kind_update(conn) -> list[tuple]:
     logger.info("check_vssl_kind_update.sql 실행")
-
+    filename= VESSEL_KIND_SQL
     """선종 코드 자동 추가 + raw 이름 변경 감지. 바뀐 행 목록을 돌려줌."""
-    sql = (SQL_DIR / "check_vssl_kind_update.sql").read_text(encoding="utf-8")
+    sql = (SQL_DIR / filename).read_text(encoding="utf-8")
     try:
         with conn.cursor() as cur:
             cur.execute(sql)
@@ -42,37 +61,25 @@ def check_vssl_kind_update(conn) -> list[tuple]:
 # fact_ship_call_load 실행
 def load_fact_ship_call():
     conn =get_connection()
-    sql = (SQL_DIR / "fact_ship_call_load.sql").read_text(encoding="utf-8")
-    
+    filename= FACT_SHIP_CALL_SQL
     try:
-        check_vssl_kind_update(conn)
-        with conn.cursor() as cur:
-            logger.info("fact_ship_call_load.sql 실행")
-            cur.execute(sql)
-        conn.commit()
-        logger.info("fact_ship_call_load.sql 완료")
-    except Exception as e:
-        logger.error("fact_ship_call_load.sql 실행 중 오류 발생: %s", e)
-        conn.rollback()
-        raise
+        changes = check_vssl_kind_update(conn)
+        elapsed = _run_sql_file(conn, filename)
+        return {"elapsed_sec" : elapsed,
+                "vessel_kind_changes":[list(r) for r in changes]}
+
     finally:
         conn.close()
         
         
 def load_fact_control_event():
     conn = get_connection()
-    sql = (SQL_DIR / "fact_control_event_load.sql").read_text(encoding="utf-8")
+    filename= FACT_CONTROL_EVENT_SQL
     
     try:
-        with conn.cursor() as cur:
-            logger.info("fact_control_event_load.sql 실행")
-            cur.execute(sql)
-        conn.commit()
-        logger.info("fact_control_event_load.sql 완료")
-    except Exception as e:
-        logger.error("fact_control_event_load.sql 실행 중 오류 발생: %s", e)
-        conn.rollback()
-        raise
+        elaspsed_sec  = _run_sql_file(conn,filename)
+        return {"filename":filename,
+                "elaspsed_sec": elaspsed_sec }
     finally:
         conn.close()
     
