@@ -1,3 +1,4 @@
+
 INSERT INTO master.dim_mof_vessel_kind
        (vssl_knd_cd, vssl_knd_nm, raw_vssl_knd_nm, control_expected, control_exempt_domestic, note)
 SELECT msc.vssl_knd_cd,
