@@ -6,6 +6,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = BASE_DIR / "logs"
+SQL_DIR= BASE_DIR / "sql"
 
 load_dotenv()
 

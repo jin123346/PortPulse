@@ -1,19 +1,8 @@
-from db.postgres import test_connection, get_target_ports
-from collectors.mof_ship_call import fetch_ship_calls
-from pprint import pprint
-from datetime import datetime
-import uuid
-import math
 import argparse
 from config.log_setting import setup_logging
 import logging
-from repositories.api_request_repository import update_api_request_status,insert_api_request
-from repositories.pipeline_repository import create_pipeline_run,update_pipeline_run_status
-from db.postgres import get_target_ports
-from repositories.ship_call_repository import save_ship_calls
-
-logger = logging.getLogger(__name__)
-
+from services.pipeline_service import run_pipeline
+from utils.report_writer import save_pipeline_report
 # 로직 순서 
 # collect_ship_call
 #         ↓
@@ -23,16 +12,11 @@ logger = logging.getLogger(__name__)
 #         ↓
 # build_mart
 
-import argparse
-import logging
-
-from services.pipeline_service import run_pipeline
+setup_logging()
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="""
@@ -160,6 +144,7 @@ def main():
             port_code=args.port_code,
             run_id=args.run_id
         )
+        save_pipeline_report(report)
 
         logger.info(
             "Pipeline 종료 - run_key=%s, status=%s",

@@ -6,10 +6,11 @@ from datetime import datetime, date
 REPORT_DIR = Path("reports")
 
 
-def save_pipeline_report(report: dict,run_key:str) -> str:
+def save_pipeline_report(report: dict) -> str:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     run_id = report["run_id"]
+    run_key = report["run_key"]
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     file_path = REPORT_DIR / f"{run_key}_{now}.json"
