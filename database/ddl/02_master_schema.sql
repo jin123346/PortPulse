@@ -42,3 +42,6 @@ CREATE TABLE master.bridge_port_mof_code (
     FOREIGN KEY (prt_ag_cd)
         REFERENCES master.dim_mof_port_code(prt_ag_cd)
 );
+
+
+
