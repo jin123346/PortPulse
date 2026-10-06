@@ -146,6 +146,8 @@ def main():
         )
         save_pipeline_report(report)
 
+        
+
         logger.info(
             "Pipeline 종료 - run_key=%s, status=%s",
             report["run_key"],

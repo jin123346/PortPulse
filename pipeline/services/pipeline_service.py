@@ -6,6 +6,7 @@
 from repositories.pipeline_repository import create_pipeline_run, update_pipeline_run_status,get_pipeline_run
 from services.ship_call_service import run_ship_call_pipeline
 from services.ship_call_control_service import run_ship_control_pipeline
+from services.transform_service import run_transform_service
 import logging
 from utils.report_writer import save_pipeline_report
 from utils.date_util import to_api_date
@@ -55,7 +56,7 @@ def run_pipeline(
             run_id,
             run_key
         )
-                     
+                  
     logger.info("pipeline Run 시작! run_id : %s, run_key : %s",run_id, run_key)
     results= []
     try:
@@ -80,8 +81,13 @@ def run_pipeline(
                 mode=mode
             )
             results.append(control_call_result)
-        
-        pipeline_status = determine_pipeline_status(results)
+        transform_result = None
+        if any(r["status"] != "FAILED" for r in results):
+            transform_result = run_transform_service(run_id=run_id)
+        else:
+            logger.warning("수집 성공 건이 없어서 transform 건너뜀 - run_id=%s",run_id)
+
+        pipeline_status = determine_pipeline_status(results,transform_result)
         report = {
             "run_id": run_id,
             "run_key": run_key,
@@ -90,7 +96,8 @@ def run_pipeline(
             "status": pipeline_status,
             "start_date": start_date,
             "end_date": end_date,
-            "results": results
+            "results": results,
+            "transform_results":transform_result
         }
 
         update_pipeline_run_status(
@@ -102,6 +109,9 @@ def run_pipeline(
             report=report,
             run_key=run_key
         )
+        
+
+
         return report
     except KeyboardInterrupt:
             update_pipeline_run_status(
@@ -152,7 +162,7 @@ def run_pipeline(
             run_key=run_key
         )
         raise
- 
+
         
             
     
@@ -160,9 +170,14 @@ def run_pipeline(
 
     
 
-def determine_pipeline_status(results: list[dict]) -> str:
+def determine_pipeline_status(
+    results: list[dict],
+    transform_result:dict | None=None
+    )-> str:
 
     statuses = [result["status"] for result in results]
+    if transform_result is not None:          # transform을 건너뛰었으면 판정에서 제외
+        statuses.append(transform_result["status"])
 
     if all(status == "SUCCESS" for status in statuses):
         return "SUCCESS"
