@@ -29,3 +29,4 @@ portpulse:
   pipeline:
     python-path: pipeline/.venv/Scripts/python.exe
     working-dir: pipeline
+    schedule-cron: "0 30 6 * * *"
