@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -82,13 +83,14 @@ public class PipelineLauncher {
 
         try{
             Process process = builder.start();
-            log.info("파이프라인 시작 - pid={} , workDir={}, command={}", process.pid(), workDir, command);
-            process.onExit().thenAccept(p->{
-                log.info("파이프라인 종료 - pid={} , exitCode={}", p.pid(), p.exitValue());
+            log.info("파이프라인 시작 - pid={} , workDir={}, command={}", process.pid(), workDir, String.join(" ", command));
+            process.onExit().thenAccept(p -> {
+                launching.set(false);          // ← 이 줄이 있는지
+                log.info("파이프라인 종료 - pid={}, exitCode={}", p.pid(), p.exitValue());
             });
 
-        }catch (Exception e){
-            throw new IllegalStateException("파이프라인 실행 실패: "+e.getMessage(),e);
+        }catch (IOException e) {
+            throw new PipelineLaunchException("파이프라인 실행 실패: " + e.getMessage(), e);
         }
     }
 

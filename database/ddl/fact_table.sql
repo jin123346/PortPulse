@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS fact.fact_ship_call (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_fact_ship_call_raw_id
     ON fact.fact_ship_call (ship_call_raw_id);
 
+CREATE INDEX IF NOT EXISTS ix_fact_ship_call_clsgn
+    ON fact.fact_ship_call (clsgn, arrival_dt);
+
 /* mart 집계용 (v10) */
 CREATE INDEX IF NOT EXISTS ix_fact_ship_call_port_arrival
     ON fact.fact_ship_call (port_code, arrival_dt);

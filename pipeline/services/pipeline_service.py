@@ -40,7 +40,7 @@ def run_pipeline(
             pipeline_name=pipeline_name,
             start_date=start_date,
             end_date=end_date,
-            trigger=trigger
+            trigger_source=trigger
         )
     else:
         pipeline_run = get_pipeline_run(run_id)

@@ -131,7 +131,8 @@ Port Pulse - 항만 데이터 수집 파이프라인
     parser.add_argument(
         "--trigger-source",
         type=str,
-        default="AIRFLOW",
+        choices=["MANUAL_CLI", "DASHBOARD", "AIRFLOW"],
+        default="MANUAL_CLI",
         help="""
             MANUAL_CLI: 터미널에서 직접 실행
             DASHBOARD: Java API로 실행

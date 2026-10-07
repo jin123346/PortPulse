@@ -59,6 +59,7 @@ public class PipelineRunRepository {
     }
 
     public List<PipelineRunResponse> findByTargetDate(LocalDate startDate , LocalDate endDate, int limit){
+
         LocalDate lastDate = (endDate == null) ? startDate : endDate;
         return jdbcClient.sql(FIND_BY_TARGET_DATE_SQL)
                 .param("limit",limit)

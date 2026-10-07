@@ -1,6 +1,7 @@
 package com.portpulse.shipcall;
 
 
+import com.portpulse.control.ControlEventItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -18,30 +19,44 @@ public class ShipCallRepository {
 
     private static final String SELECT_COLUMNS= """
                 select
-                ship_call_id, ship_call_raw_id, port_code, port_name,
-                etrypt_year, etrypt_co, clsgn, vessel_name,vessel_kind_cd,
-                gross_tonnage, ibobprt_nm,arrival_dt, arrival_source, departure_dt,
-                departure_source, stay_minutes, last_control_event, last_control_event_dt,
-                last_facility_code, last_facility_sub_code, last_facility_name,
-                control_match_priority, suspected_duplicate, duplicate_of_ship_call_raw_id,
-                updated_at
+                    fsc.ship_call_id, fsc.ship_call_raw_id, fsc.port_code, fsc.port_name,
+                    fsc.etrypt_year, fsc.etrypt_co, fsc.clsgn, fsc.vessel_name, fsc.vessel_kind_cd,
+                    COALESCE(vk.vssl_knd_nm, fsc.vessel_kind_cd) AS vessel_kind_name,
+                    fsc.gross_tonnage, fsc.ibobprt_nm, fsc.arrival_dt, fsc.arrival_source, fsc.departure_dt,
+                    fsc.departure_source,
+                    nx.arrival_dt AS next_arrival_dt,
+                    nx.port_name  AS next_port_name,
+                    fsc.stay_minutes, fsc.last_control_event, fsc.last_control_event_dt,
+                    fsc.last_facility_code, fsc.last_facility_sub_code, fsc.last_facility_name,
+                    fsc.control_match_priority, fsc.suspected_duplicate, fsc.duplicate_of_ship_call_raw_id,
+                    fsc.updated_at
                 from fact.fact_ship_call fsc
+                LEFT JOIN master.dim_mof_vessel_kind vk ON vk.vssl_knd_cd = fsc.vessel_kind_cd
+                LEFT JOIN LATERAL (
+                    SELECT n.arrival_dt, n.port_name
+                      FROM fact.fact_ship_call n
+                     WHERE n.clsgn = fsc.clsgn
+                       AND n.arrival_dt > fsc.arrival_dt
+                       AND n.duplicate_of_ship_call_raw_id IS NULL
+                     ORDER BY n.arrival_dt
+                     LIMIT 1
+                ) nx ON true
             """;
 
     private static final String FIND_ARRIVALS_SQL=  SELECT_COLUMNS + """
-            WHERE port_code=:portCode
-                AND arrival_dt >= :startDate
-                AND arrival_dt < :endDate
-                AND duplicate_of_ship_call_raw_id IS NULL
-            ORDER BY arrival_dt
+            WHERE fsc.port_code = :portCode
+              AND fsc.arrival_dt >= :startDate
+              AND fsc.arrival_dt <  :endDate
+              AND fsc.duplicate_of_ship_call_raw_id IS NULL
+            ORDER BY fsc.arrival_dt
             """;
 
     private static final String FIND_DEPARTURES_SQL=  SELECT_COLUMNS + """
-            WHERE port_code=:portCode
-                AND departure_dt >= :startDate
-                AND departure_dt < :endDate
-                AND duplicate_of_ship_call_raw_id IS NULL
-            ORDER BY departure_dt
+            WHERE fsc.port_code = :portCode
+              AND fsc.departure_dt >= :startDate
+              AND fsc.departure_dt <  :endDate
+              AND fsc.duplicate_of_ship_call_raw_id IS NULL
+            ORDER BY fsc.departure_dt
             """;
 
     public List<ShipCallItem>  findArrivals(String portCode, LocalDate date){
@@ -69,10 +84,42 @@ public class ShipCallRepository {
 
         return jdbcClient.sql(sql)
                 .param("portCode",portCode)
-                .param("starDate",startDate.atStartOfDay())
-                .param("endDate",startDate.plusDays(1).atStartOfDay())  //종료일 다음날 00시까지
+                .param("startDate",startDate.atStartOfDay())
+                .param("endDate",lastDate.plusDays(1).atStartOfDay())  //종료일 다음날 00시까지
                 .query(ShipCallItem.class)
                 .list();
 
+    }
+
+    private static final String FIND_BY_CLSGN_SQL = SELECT_COLUMNS + """
+                   WHERE fsc.clsgn = :clsgn
+                     AND fsc.duplicate_of_ship_call_raw_id IS NULL
+                               ORDER BY fsc.arrival_dt DESC NULLS LAST
+                   LIMIT :limit
+        """;
+
+    private static final String FIND_EVENTS_SQL = """
+        SELECT e.event_seq, e.event_code, e.event_name, e.event_dt,
+               e.facility_name, e.minutes_to_next, e.is_last_event
+          FROM fact.fact_ship_call s
+          JOIN fact.fact_control_event e
+            ON e.control_call_raw_id = s.control_call_raw_id
+         WHERE s.ship_call_id = :shipCallId
+         ORDER BY e.event_seq
+        """;
+
+    public List<ShipCallItem> findByClsgn(String clsgn, int limit) {
+        return jdbcClient.sql(FIND_BY_CLSGN_SQL)
+                .param("clsgn", clsgn)
+                .param("limit", limit)
+                .query(ShipCallItem.class)
+                .list();
+    }
+
+    public List<ControlEventItem> findEvents(Long shipCallId) {
+        return jdbcClient.sql(FIND_EVENTS_SQL)
+                .param("shipCallId", shipCallId)
+                .query(ControlEventItem.class)
+                .list();
     }
 }

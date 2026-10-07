@@ -13,7 +13,7 @@ def create_pipeline_run(
     pipeline_name : str,
     start_date : str,
     end_date : str,
-    trigger: str
+    trigger_source: str
 ):
     conn = get_connection()
     
@@ -29,7 +29,7 @@ def create_pipeline_run(
                     run_key,
                     start_date,
                     end_date,
-                    trigger,
+                    trigger_source,
                     status
                 )
                 SELECT
@@ -53,7 +53,7 @@ def create_pipeline_run(
                     pipeline_name,
                     start_date,
                     end_date,
-                    trigger
+                    trigger_source
                 )
             )
 

@@ -5,6 +5,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +31,10 @@ public class PipelineController {
 //    }
 
     @GetMapping("/runs")
-    public List<PipelineRunResponse> recentRuns(@RequestParam(name="startDate", required = false)
-                                                String startDate,
-                                                @RequestParam(name="endDate", required = false)
-                                                String endDate,
-                                                @RequestParam(name="limit",defaultValue = "10") int limit){
+    public List<PipelineRunResponse> recentRuns(@RequestParam(name="startDate", required = false) LocalDate startDate,
+                                                @RequestParam(name="endDate", required = false) LocalDate endDate,
+                                                @RequestParam(name="limit",defaultValue = "10") int limit
+                                                ){
         if (startDate != null){
             return pipelineRunRepository.findByTargetDate(startDate,endDate,limit);
         }

@@ -1,5 +1,6 @@
 package com.portpulse.pipeline;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.portpulse.common.DateType;
 import com.portpulse.common.Mode;
 
@@ -7,17 +8,20 @@ import java.time.LocalDate;
 
 public record PipelineRunRequest(
         Mode mode,
+        @JsonFormat(pattern = "yyyyMMdd")
         LocalDate startDate,
+        @JsonFormat(pattern = "yyyyMMdd")
         LocalDate endDate,
         String portCode,
         DateType dateType,
-        Integer runId
+        Integer runId,
+        String trigger
 ) {
 
     public PipelineRunRequest{
         if (mode == null) mode = Mode.ALL;
 
-        if(runId ==null){
+        if(runId == null){
             if (startDate == null || endDate==null){
                 throw new IllegalArgumentException("신규실행은 startDate, endDate가 필수 입니다.");
             }

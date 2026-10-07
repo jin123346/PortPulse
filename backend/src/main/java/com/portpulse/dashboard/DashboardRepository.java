@@ -19,9 +19,38 @@ public class DashboardRepository {
         this.jdbcClient = jdbcClient;
     }
     private static final String KPI_SELECT = """
-        SELECT port_code,
+        
+            SELECT port_code,
                kpi_date,
-               ... (기존 32개 컬럼 그대로) ...
+               port_name,
+               region_key,
+               arrivals,
+               departures,
+               arrivals_with_tonnage,
+               sum_gross_tonnage,
+               avg_gross_tonnage,
+               arrivals_avg_7d              AS arrivals_avg7d,
+               arrivals_chg_pct_7d          AS arrivals_chg_pct7d,
+               departures_avg_7d            AS departures_avg7d,
+               departures_chg_pct_7d        AS departures_chg_pct7d,
+               avg_gross_tonnage_7d         AS avg_gross_tonnage7d,
+               avg_gross_tonnage_chg_pct_7d AS avg_gross_tonnage_chg_pct7d,
+               history_days,
+               arrivals_zscore,
+               departures_zscore,
+               is_complete_day,
+               is_anomaly,
+               anomaly_reason,
+               refreshed_at,
+               day_of_week,
+               is_weekend,
+               is_holiday,
+               holiday_name,
+               ly_date,
+               ly_holiday_name,
+               arrivals_ly,
+               departures_ly,
+               arrivals_yoy_pct,
                departures_yoy_pct
           FROM mart.port_daily_kpi
         """;
@@ -29,9 +58,8 @@ public class DashboardRepository {
                 where kpi_date = :kpiDate
                 ORDER BY arrivals desc, port_code
             """;
-    private static final String FIND_PORT_DAILY_KPI_SQL = """
-                where port_code = :portCode
-                AND kpi_date = :kpiDate
+    private static final String FIND_PORT_DAILY_KPI_SQL =KPI_SELECT+ """
+                where port_code = :portCode AND kpi_date = :kpiDate
             """;
     private static final String FIND_LATEST_COMPLETE_DATE_SQL= """
                 select max(kpi_date) from mart.port_daily_kpi pdk

@@ -1,0 +1,1241 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Port Pulse</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M5 21c3 0 3-2 6-2s3 2 6 2 3-2 6-2 3 2 4 2' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            color-scheme: light;
+            --page: #f9f9f7;
+            --surface: #fcfcfb;
+            --surface-2: #f3f2ef;
+            --ink: #0b0b0b;
+            --ink-2: #52514e;
+            --muted: #898781;
+            --grid: #e1e0d9;
+            --axis: #c3c2b7;
+            --border: rgba(11, 11, 11, 0.10);
+            --series-1: #2a78d6;   /* 입항 */
+            --series-2: #eb6834;   /* 출항 */
+            --good: #0ca30c;
+            --good-text: #006300;
+            --warning: #fab219;
+            --serious: #ec835a;
+            --critical: #d03b3b;
+            --info: #2a78d6;
+            --focus: #2a78d6;
+            --row-hover: rgba(42, 120, 214, 0.06);
+            --row-active: rgba(42, 120, 214, 0.12);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                color-scheme: dark;
+                --page: #0d0d0d;
+                --surface: #1a1a19;
+                --surface-2: #232321;
+                --ink: #ffffff;
+                --ink-2: #c3c2b7;
+                --muted: #898781;
+                --grid: #2c2c2a;
+                --axis: #383835;
+                --border: rgba(255, 255, 255, 0.10);
+                --series-1: #3987e5;
+                --series-2: #d95926;
+                --good-text: #0ca30c;
+                --info: #3987e5;
+                --focus: #3987e5;
+                --row-hover: rgba(57, 135, 229, 0.08);
+                --row-active: rgba(57, 135, 229, 0.18);
+            }
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --page: #0d0d0d;
+            --surface: #1a1a19;
+            --surface-2: #232321;
+            --ink: #ffffff;
+            --ink-2: #c3c2b7;
+            --muted: #898781;
+            --grid: #2c2c2a;
+            --axis: #383835;
+            --border: rgba(255, 255, 255, 0.10);
+            --series-1: #3987e5;
+            --series-2: #d95926;
+            --good-text: #0ca30c;
+            --info: #3987e5;
+            --focus: #3987e5;
+            --row-hover: rgba(57, 135, 229, 0.08);
+            --row-active: rgba(57, 135, 229, 0.18);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            background: var(--page);
+            color: var(--ink);
+            font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+        }
+        button, input, select { font: inherit; color: inherit; }
+        .num { font-variant-numeric: tabular-nums; }
+
+        /* ---------- 상단 바 ---------- */
+        header {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+            padding: 12px 24px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+        .brand small { font-weight: 400; color: var(--muted); font-size: 13px; letter-spacing: 0; }
+        .logo {
+            width: 32px; height: 32px; border-radius: 9px; flex: none;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--series-1), #104281);
+            color: #fff;
+        }
+        .logo svg { width: 18px; height: 18px; }
+        .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2);
+            padding: 3px 10px; border-radius: 999px; background: var(--surface-2); }
+        .live[hidden] { display: none; }
+        .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+        .toolbar { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+        .toolbar label { color: var(--ink-2); font-size: 13px; }
+
+        input[type="date"], input[type="text"], select {
+            height: 34px; padding: 0 10px;
+            background: var(--surface); border: 1px solid var(--axis); border-radius: 6px;
+        }
+        input:focus-visible, select:focus-visible, button:focus-visible, tr:focus-visible {
+            outline: 2px solid var(--focus); outline-offset: 1px;
+        }
+        .btn {
+            height: 34px; padding: 0 14px; border-radius: 6px; cursor: pointer;
+            border: 1px solid var(--axis); background: var(--surface);
+        }
+        .btn:hover { background: var(--surface-2); }
+        .btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+        .btn.primary:hover { opacity: 0.88; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.ghost { border-color: transparent; background: transparent; color: var(--ink-2); }
+
+        /* ---------- 레이아웃 ---------- */
+        main { padding: 20px 24px 48px; display: grid; gap: 16px; max-width: 1440px; margin: 0 auto; }
+        .row { display: grid; gap: 16px; }
+        .row.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .row.split { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+        @media (max-width: 1100px) {
+            .row.tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .row.split { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            header, main { padding-left: 16px; padding-right: 16px; }
+            .brand small, .live { display: none; }
+            .row.tiles { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 20px;
+            min-width: 0;
+            box-shadow: 0 1px 2px rgba(11, 11, 11, 0.04), 0 4px 16px rgba(11, 11, 11, 0.03);
+        }
+        .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+        .card-title { font-size: 15px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+        .card-sub { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+        /* ---------- 지표 타일 ---------- */
+        .tile { position: relative; overflow: hidden; }
+        .tile .label { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; font-weight: 500; }
+        .tile .icon {
+            width: 28px; height: 28px; border-radius: 8px; flex: none;
+            display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2);
+        }
+        .tile .icon svg { width: 16px; height: 16px; }
+        .tile .icon.arr { color: var(--series-1); }
+        .tile .icon.dep { color: var(--series-2); }
+        .tile .icon.warn { color: var(--serious); }
+        .tile .value { font-size: 32px; font-weight: 650; letter-spacing: -0.03em; margin-top: 10px; line-height: 1.1; }
+        .tile .value .unit { font-size: 15px; font-weight: 500; color: var(--ink-2); margin-left: 3px; letter-spacing: 0; }
+        .tile .meta { color: var(--muted); font-size: 12px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tile::after {                       /* 타일 상단의 얇은 강조선 */
+            content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--tile-accent, transparent);
+        }
+        .tile.t-arr { --tile-accent: var(--series-1); }
+        .tile.t-dep { --tile-accent: var(--series-2); }
+        .tile.t-warn { --tile-accent: var(--serious); }
+
+        /* ---------- 상태 배지 (아이콘 + 라벨) ---------- */
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 12px; font-weight: 600; white-space: nowrap;
+            padding: 2px 8px; border-radius: 999px;
+            background: var(--surface-2); color: var(--ink);
+        }
+        .badge .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+        .badge.good .dot { background: var(--good); }
+        .badge.warning .dot { background: var(--warning); }
+        .badge.serious .dot { background: var(--serious); }
+        .badge.critical .dot { background: var(--critical); }
+        .badge.info .dot { background: var(--info); animation: pulse 1.2s ease-in-out infinite; }
+        .badge.muted .dot { background: var(--muted); }
+        @keyframes pulse { 50% { opacity: 0.3; } }
+        @media (prefers-reduced-motion: reduce) { .badge.info .dot { animation: none; } }
+
+        .warn-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+        .warn-list li { font-size: 12px; color: var(--ink-2); padding-left: 14px; position: relative; }
+        .warn-list li::before { content: "!"; position: absolute; left: 0; font-weight: 700; color: var(--serious); }
+
+        /* ---------- 막대 차트 ---------- */
+        .legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink-2); }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+        .chart { display: grid; gap: 8px; position: relative; }
+        .bar-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; align-items: center; }
+        .bar-label { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+        .bar-pair {
+            display: grid; gap: 2px; padding: 5px 6px; cursor: pointer; border-radius: 6px;
+            border-left: 1px solid var(--axis);
+        }
+        .bar-pair:hover { background-color: var(--row-hover); }
+        .bar-line { display: flex; align-items: center; gap: 6px; height: 11px; }
+        .bar { height: 11px; border-radius: 0 4px 4px 0; min-width: 2px; transition: width 0.4s ease; }
+        .bar.arr { background: var(--series-1); }
+        .bar.dep { background: var(--series-2); }
+        .bar-val { font-size: 11px; color: var(--muted); }
+        .tooltip {
+            position: fixed; pointer-events: none; z-index: 50;
+            background: var(--ink); color: var(--surface);
+            font-size: 12px; padding: 6px 10px; border-radius: 6px;
+            white-space: nowrap; opacity: 0; transition: opacity 0.08s;
+        }
+        .tooltip.show { opacity: 1; }
+
+        /* ---------- 표 ---------- */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+        th { font-size: 12px; font-weight: 600; color: var(--muted); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+        .runs td, .runs th { padding: 8px 6px; font-size: 13px; }
+        .runs .when { display: block; font-size: 11px; color: var(--muted); }
+        .share { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+        .share .track { width: 64px; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+        .share .fill { height: 100%; border-radius: 2px; background: var(--series-1); }
+        .share .fill.dep { background: var(--series-2); }
+        .port-name { font-weight: 500; }
+        th.r, td.r { text-align: right; }
+        tbody tr.clickable { cursor: pointer; }
+        tbody tr.clickable:hover { background: var(--row-hover); }
+        tbody tr.active { background: var(--row-active); }
+        .delta { font-size: 12px; color: var(--ink-2); }
+        .delta.none { color: var(--muted); }
+        .empty, .loading, .error-box { padding: 20px 4px; color: var(--muted); font-size: 13px; text-align: center; }
+        .error-box { color: var(--critical); }
+        .scroll-y { max-height: 420px; overflow-y: auto; }
+        .tag { font-size: 11px; color: var(--muted); }
+
+        /* ---------- 파이프라인 폼 ---------- */
+        .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+        .form .field { display: grid; gap: 4px; }
+        .form .field label { font-size: 12px; color: var(--ink-2); }
+        .form .field input, .form .field select { width: 100%; }
+        .form .actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+        .msg { font-size: 12px; }
+        .msg.ok { color: var(--good-text); }
+        .msg.err { color: var(--critical); }
+        hr.sep { border: 0; border-top: 1px solid var(--grid); margin: 16px 0 12px; }
+
+        /* ---------- 항만 상세 패널 ---------- */
+        .detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+        @media (max-width: 700px) { .detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .mini { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
+        .mini .label { font-size: 12px; color: var(--ink-2); }
+        .mini .value { font-size: 20px; font-weight: 600; }
+        #detailCard { scroll-margin-top: 76px; }   /* 고정 헤더에 제목이 가리지 않게 */
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--grid); margin-bottom: 8px; }
+        .tab {
+            border: 0; background: transparent; padding: 8px 12px; cursor: pointer;
+            color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px;
+        }
+        .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+        /* 체류 상태: 완료(실제) / 예정(신고 기준) / 경과(아직 출항 정보 없음) */
+        .stay { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
+        .stay-k {
+            font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; line-height: 16px;
+            border: 1px solid transparent; font-style: normal;
+        }
+        .stay-k.done { background: var(--surface-2); color: var(--ink-2); }
+        .stay-k.plan { border: 1px dashed var(--axis); color: var(--ink-2); }
+        .stay-k.live { background: var(--row-active); color: var(--ink); }
+        .stay-k.pre  { border: 1px dashed var(--axis); color: var(--muted); }
+        .stay-k.gap  { border: 1px dashed var(--serious); color: var(--ink-2); }
+        .stay-sub { display: block; font-size: 11px; color: var(--muted); text-align: right; }
+        .stay-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; color: var(--muted); margin: 0 0 8px; }
+        .stay-legend .chip {
+            all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            padding: 2px 8px 2px 2px; border-radius: 6px; border: 1px solid transparent;
+        }
+        .stay-legend .chip:hover { background: var(--row-hover); }
+        .stay-legend .chip.on { border-color: var(--ink-2); color: var(--ink); }
+        .stay-legend .chip:focus-visible { outline: 2px solid var(--focus); }
+        .stay-legend .clear { all: unset; cursor: pointer; color: var(--series-1); }
+
+        /* 정렬 가능한 열 제목 */
+        .sort-btn {
+            all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+            font: inherit; color: inherit; white-space: nowrap;
+        }
+        .sort-btn:hover { color: var(--ink); }
+        .sort-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+        .sort-ic { font-size: 10px; color: var(--axis); width: 10px; text-align: center; }
+        .sort-btn.on { color: var(--ink); }
+        .sort-btn.on .sort-ic { color: var(--series-1); }
+        /* ---------- 선박 히스토리 드로어 ---------- */
+        .drawer-backdrop {
+            position: fixed; inset: 0; z-index: 40; background: rgba(11, 11, 11, 0.35);
+            opacity: 0; pointer-events: none; transition: opacity 0.15s;
+        }
+        .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        .drawer {
+            position: fixed; top: 0; right: 0; bottom: 0; z-index: 41;
+            width: min(560px, 100vw); background: var(--surface); border-left: 1px solid var(--border);
+            box-shadow: -8px 0 32px rgba(11, 11, 11, 0.12);
+            transform: translateX(100%); transition: transform 0.2s ease;
+            display: flex; flex-direction: column;
+        }
+        .drawer.open { transform: none; }
+        @media (prefers-reduced-motion: reduce) { .drawer, .drawer-backdrop { transition: none; } }
+        .drawer-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--grid); display: flex; gap: 12px; align-items: flex-start; }
+        .drawer-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
+        .drawer-head .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+        .drawer-body { padding: 16px 20px 32px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
+        .section-title { font-size: 13px; font-weight: 650; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
+
+        .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+        .timeline li { position: relative; padding: 0 0 0 26px; }
+        .timeline li::before {                 /* 세로선 */
+            content: ""; position: absolute; left: 7px; top: 14px; bottom: -2px; width: 2px; background: var(--grid);
+        }
+        .timeline li:last-child::before { display: none; }
+        .tl-dot {
+            position: absolute; left: 0; top: 4px; width: 16px; height: 16px; border-radius: 50%;
+            background: var(--surface); border: 2px solid var(--series-1);
+        }
+        .timeline li.first .tl-dot { background: var(--series-1); }
+        .timeline li.last .tl-dot { border-color: var(--series-2); }
+        .timeline li.last.open-end .tl-dot { border-style: dashed; }
+        .tl-main { display: flex; justify-content: space-between; gap: 12px; }
+        .tl-name { font-weight: 600; }
+        .tl-time { color: var(--ink-2); font-size: 12px; }
+        .tl-fac { color: var(--muted); font-size: 12px; }
+        .tl-gap {
+            display: inline-block; margin: 6px 0 12px; font-size: 11px; color: var(--ink-2);
+            background: var(--surface-2); border-radius: 4px; padding: 1px 8px;
+        }
+        .tl-gap.long { background: rgba(236, 131, 90, 0.16); }
+        .ship-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .hist tr.clickable.active { background: var(--row-active); }
+        #detailBody tbody tr.ship { cursor: pointer; }
+        #detailBody tbody tr.ship:hover { background: var(--row-hover); }
+
+        .anomaly-note { font-size: 12px; color: var(--ink-2); background: var(--surface-2); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; }
+        .search { width: 180px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 16c2 0 2-1.5 4-1.5S8 16 10 16s2-1.5 4-1.5S16 16 18 16s2-1.5 4-1.5"/>
+        <path d="M2 20c2 0 2-1.5 4-1.5S8 20 10 20s2-1.5 4-1.5S16 20 18 20s2-1.5 4-1.5"/>
+        <path d="M5 12l1.5-5h11L19 12"/><path d="M9 7V4h5v3"/>
+      </svg>
+    </span>
+        Port Pulse <small>항만 입출항 대시보드</small>
+        <span class="live" id="liveBadge" hidden><i></i><span id="liveText"></span></span>
+    </div>
+    <div class="toolbar">
+        <label for="kpiDate">기준일</label>
+        <input type="date" id="kpiDate" aria-describedby="dateHint">
+        <button class="btn" id="btnLatest" type="button" title="가장 최근 완료일로 조회">최신</button>
+        <button class="btn primary" id="btnReload" type="button">조회</button>
+        <span id="dateHint" class="card-sub"></span>
+    </div>
+</header>
+
+<main>
+    <!-- 지표 타일 -->
+    <section class="row tiles" aria-label="요약 지표">
+        <div class="card tile t-arr">
+            <div class="label"><span class="icon arr" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M6 10l6 6 6-6"/><path d="M4 20h16"/></svg>
+      </span>전체 입항</div>
+            <div class="value num" id="tArrivals">–</div>
+            <div class="meta" id="tArrivalsMeta">&nbsp;</div>
+        </div>
+        <div class="card tile t-dep">
+            <div class="label"><span class="icon dep" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V8"/><path d="M6 14l6-6 6 6"/><path d="M4 4h16"/></svg>
+      </span>전체 출항</div>
+            <div class="value num" id="tDepartures">–</div>
+            <div class="meta" id="tDeparturesMeta">&nbsp;</div>
+        </div>
+        <div class="card tile t-warn">
+            <div class="label"><span class="icon warn" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 7-8"/><circle cx="19" cy="6" r="2"/></svg>
+      </span>이상징후 항만</div>
+            <div class="value num" id="tAnomalies">–</div>
+            <div class="meta" id="tAnomaliesMeta">&nbsp;</div>
+        </div>
+        <div class="card tile">
+            <div class="label"><span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      </span>데이터 품질</div>
+            <div class="value" id="tQuality" style="font-size:18px; margin-top:14px;">–</div>
+            <div class="meta" id="tQualityMeta">&nbsp;</div>
+        </div>
+    </section>
+
+    <!-- 차트 + 파이프라인 -->
+    <section class="row split">
+        <div class="card">
+            <div class="card-head">
+                <h2 class="card-title">항만별 입출항 상위 10</h2>
+                <div class="legend" aria-hidden="true">
+                    <span><i class="swatch" style="background:var(--series-1)"></i>입항</span>
+                    <span><i class="swatch" style="background:var(--series-2)"></i>출항</span>
+                </div>
+            </div>
+            <div id="chart" class="chart" role="img" aria-label="항만별 입항·출항 건수 막대 차트. 같은 값은 아래 항만 표에서 확인할 수 있습니다."></div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <h2 class="card-title">수집 파이프라인</h2>
+                <span class="card-sub">Python 수집 → fact → mart</span>
+            </div>
+            <form id="runForm" class="form" novalidate>
+                <div class="field">
+                    <label for="fMode">모드</label>
+                    <select id="fMode">
+                        <option value="ALL">ALL · 입출항 + 관제</option>
+                        <option value="SHIP_CALL">SHIP_CALL · 입출항만</option>
+                        <option value="CONTROL">CONTROL · 관제만</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="fDateType">입출항 기준</label>
+                    <select id="fDateType">
+                        <option value="I">I · 입항</option>
+                        <option value="O">O · 출항</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="fStart">시작일</label>
+                    <input type="date" id="fStart" required>
+                </div>
+                <div class="field">
+                    <label for="fEnd">종료일</label>
+                    <input type="date" id="fEnd" required>
+                </div>
+                <div class="field">
+                    <label for="fPort">항만 코드 (비우면 전체)</label>
+                    <input type="text" id="fPort" inputmode="numeric" maxlength="3" placeholder="예: 020">
+                </div>
+                <div class="field" style="align-self:end">
+                    <button class="btn primary" id="btnRun" type="submit">수집 실행</button>
+                </div>
+                <div class="actions"><span id="runMsg" class="msg" role="status" aria-live="polite"></span></div>
+            </form>
+
+            <hr class="sep">
+            <div class="card-head" style="margin-bottom:6px">
+                <h3 class="card-title" style="font-size:13px">최근 실행 이력</h3>
+                <button class="btn ghost" id="btnRuns" type="button">새로고침</button>
+            </div>
+            <div class="table-wrap scroll-y" style="max-height:240px">
+                <table class="runs">
+                    <thead><tr><th>#</th><th>상태</th><th>수집 기간</th><th>시작</th><th></th></tr></thead>
+                    <tbody id="runsBody"><tr><td colspan="5" class="loading">불러오는 중…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 항만 상세 -->
+    <section class="card" id="detailCard" hidden>
+        <div class="card-head">
+            <h2 class="card-title" id="detailTitle">항만 상세</h2>
+            <button class="btn ghost" id="btnCloseDetail" type="button">닫기</button>
+        </div>
+        <div id="detailBody"></div>
+    </section>
+
+    <!-- 항만 표 -->
+    <section class="card">
+        <div class="card-head">
+            <h2 class="card-title">항만별 KPI <span class="card-sub" id="portCount"></span></h2>
+            <input type="text" id="portSearch" class="search" placeholder="항만명·코드 검색" aria-label="항만 검색">
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead id="portHead"></thead>
+                <tbody id="portBody"><tr><td colspan="7" class="loading">불러오는 중…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 모니터링 상세 -->
+    <section class="card">
+        <div class="card-head">
+            <h2 class="card-title">데이터 품질 모니터링</h2>
+            <span class="card-sub" id="monPeriod"></span>
+        </div>
+        <div id="monBody"><div class="loading">불러오는 중…</div></div>
+    </section>
+</main>
+
+<div class="tooltip" id="tooltip" role="tooltip"></div>
+
+<!-- 선박 히스토리 드로어 -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+    <div class="drawer-head">
+        <div style="flex:1; min-width:0">
+            <h2 id="drawerTitle">선박 히스토리</h2>
+            <div class="sub" id="drawerSub"></div>
+        </div>
+        <button class="btn ghost" id="btnCloseDrawer" type="button" aria-label="닫기">닫기</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>
+    /* =====================================================================
+       API 경로 — 백엔드와 다르면 여기만 바꾸면 됩니다
+       ===================================================================== */
+    const API = {
+        dailyKpi:   (date) => `/api/kpi/daily${date ? `?date=${date}` : ""}`,
+        portDetail: (code, date) => `/api/kpi/${encodeURIComponent(code)}/daily${date ? `?date=${date}` : ""}`,
+        runs:       (limit = 10) => `/api/pipeline/runs?limit=${limit}`,
+        runPost:    "/api/pipeline/runs",
+        monitoring: "/api/monitoring/summary",
+        shipCalls:  (clsgn, limit = 20) => `/api/ships/${encodeURIComponent(clsgn)}/calls?limit=${limit}`,
+        callEvents: (shipCallId) => `/api/ship-calls/${encodeURIComponent(shipCallId)}/events`,
+    };
+
+    /* ---------- 공통 ---------- */
+    const $ = (id) => document.getElementById(id);
+    const fmtInt = (v) => (v === null || v === undefined) ? "–" : Number(v).toLocaleString("ko-KR");
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const toCompact = (isoDate) => isoDate ? isoDate.replaceAll("-", "") : null;   // 2026-10-07 → 20261007
+
+    function fmtPct(v) {
+        if (v === null || v === undefined) return `<span class="delta none">–</span>`;
+        const n = Number(v);
+        const arrow = n > 0 ? "▲" : n < 0 ? "▼" : "";
+        return `<span class="delta num">${arrow} ${Math.abs(n).toFixed(1)}%</span>`;
+    }
+    function fmtDateTime(v) {
+        if (!v) return "–";
+        const s = String(v).replace("T", " ");
+        return s.slice(5, 16);                                     // MM-DD HH:mm
+    }
+    function fmtStay(min) {
+        if (min === null || min === undefined) return "–";
+        const d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+        if (d) return `${d}일 ${h}시간`;
+        return h ? `${h}시간 ${m}분` : `${m}분`;
+    }
+
+    async function api(path, options) {
+        const res = await fetch(path, options);
+        let body = null;
+        try { body = await res.json(); } catch (_) { /* 본문 없음 */ }
+        if (!res.ok) throw new Error(body?.message || `요청 실패 (HTTP ${res.status})`);
+        return body;
+    }
+
+    /* ---------- 상태 배지 ---------- */
+    const RUN_STATUS = {
+        SUCCESS:         ["good", "성공"],
+        PARTIAL_SUCCESS: ["warning", "일부 성공"],
+        FAILED:          ["critical", "실패"],
+        RUNNING:         ["info", "실행 중"],
+        CANCELLED:       ["muted", "취소"],
+    };
+    const TRIGGER_LABEL = { DASHBOARD: "대시보드", AIRFLOW: "스케줄", MANUAL_CLI: "터미널" };
+    function badge(kind, label) { return `<span class="badge ${kind}"><i class="dot"></i>${esc(label)}</span>`; }
+    function runBadge(status) {
+        const [kind, label] = RUN_STATUS[status] || ["muted", status || "알 수 없음"];
+        return badge(kind, label);
+    }
+
+    /* =====================================================================
+       1. 일별 KPI
+       ===================================================================== */
+    let dailyRows = [];
+    let selectedPort = null;
+    let currentDate = null;   // 화면이 보고 있는 실제 기준일 (yyyy-MM-dd)
+
+    async function loadDaily(dateOrNull) {
+        $("portBody").innerHTML = `<tr><td colspan="7" class="loading">불러오는 중…</td></tr>`;
+        $("chart").innerHTML = `<div class="loading">불러오는 중…</div>`;
+        try {
+            dailyRows = await api(API.dailyKpi(dateOrNull)) || [];
+            currentDate = dailyRows[0]?.kpiDate || dateOrNull;
+            $("kpiDate").value = currentDate || "";
+            renderDateHint();
+            renderTiles();
+            renderChart();
+            renderPortTable();
+            if (selectedPort) loadDetail(selectedPort);
+        } catch (e) {
+            dailyRows = [];
+            renderTiles();
+            $("chart").innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+            $("portBody").innerHTML = `<tr><td colspan="7" class="error-box">${esc(e.message)}</td></tr>`;
+        }
+    }
+
+    function renderDateHint() {
+        const r = dailyRows[0];
+        if (!r) { $("dateHint").textContent = ""; return; }
+        const parts = [];
+        if (r.isCompleteDay === false) parts.push("수집 진행 중인 날");
+        if (r.holidayName) parts.push(r.holidayName);
+        else if (r.isWeekend) parts.push("주말");
+        $("dateHint").textContent = parts.join(" · ");
+    }
+
+    function renderTiles() {
+        const sum = (k) => dailyRows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+        const hasRows = dailyRows.length > 0;
+        const withUnit = (v, unit) => `${fmtInt(v)}<span class="unit">${unit}</span>`;
+        $("tArrivals").innerHTML = hasRows ? withUnit(sum("arrivals"), "척") : "–";
+        $("tDepartures").innerHTML = hasRows ? withUnit(sum("departures"), "척") : "–";
+
+        $("liveBadge").hidden = !hasRows;
+        if (hasRows) {
+            const r = dailyRows[0];
+            $("liveText").textContent = `${r.kpiDate} 기준` + (r.refreshedAt ? ` · 갱신 ${fmtDateTime(r.refreshedAt)}` : "");
+        }
+
+        const lyArr = dailyRows.filter((r) => r.arrivalsLy !== null && r.arrivalsLy !== undefined);
+        $("tArrivalsMeta").textContent = lyArr.length
+            ? `전년 동기 ${fmtInt(lyArr.reduce((a, r) => a + Number(r.arrivalsLy), 0))}척 (비교 가능 항만 기준)`
+            : hasRows ? `${dailyRows.length}개 항만` : " ";
+        $("tDeparturesMeta").textContent = hasRows ? `${dailyRows.length}개 항만` : " ";
+
+        const anomalies = dailyRows.filter((r) => r.isAnomaly);
+        $("tAnomalies").innerHTML = hasRows ? withUnit(anomalies.length, "곳") : "–";
+        $("tAnomaliesMeta").textContent = anomalies.length
+            ? anomalies.slice(0, 3).map((r) => r.portName || r.portCode).join(", ") + (anomalies.length > 3 ? " 외" : "")
+            : hasRows ? "직전 28일 대비 이상 없음" : " ";
+    }
+
+    /* ---------- 막대 차트: 입항 기준 상위 10개 항만 ---------- */
+    function renderChart() {
+        const top = [...dailyRows]
+            .sort((a, b) => (b.arrivals ?? 0) - (a.arrivals ?? 0) || (b.departures ?? 0) - (a.departures ?? 0))
+            .slice(0, 10);
+        if (!top.length) { $("chart").innerHTML = `<div class="empty">표시할 데이터가 없습니다.</div>`; return; }
+
+        const max = Math.max(1, ...top.map((r) => Math.max(r.arrivals ?? 0, r.departures ?? 0)));
+        const w = (v) => `${((v ?? 0) / max) * 100}%`;
+        $("chart").innerHTML = top.map((r) => `
+    <div class="bar-row">
+      <div class="bar-label" title="${esc(r.portName)}">${esc(r.portName || r.portCode)}</div>
+      <div class="bar-pair" data-port="${esc(r.portCode)}"
+           data-tip="${esc(r.portName || r.portCode)} · 입항 ${fmtInt(r.arrivals)} · 출항 ${fmtInt(r.departures)}">
+        <div class="bar-line"><div class="bar arr" style="width:${w(r.arrivals)}"></div><span class="bar-val num">${fmtInt(r.arrivals)}</span></div>
+        <div class="bar-line"><div class="bar dep" style="width:${w(r.departures)}"></div><span class="bar-val num">${fmtInt(r.departures)}</span></div>
+      </div>
+    </div>`).join("");
+    }
+
+    /* ---------- 항만 표 ---------- */
+    /* ---------- 정렬 공통: 값이 없는 행은 방향과 상관없이 항상 맨 뒤 ---------- */
+    const isBlank = (v) => v === null || v === undefined || v === "" || (typeof v === "number" && Number.isNaN(v));
+    function compareBy(getter, dir) {
+        return (a, b) => {
+            const va = getter(a), vb = getter(b);
+            if (isBlank(va) && isBlank(vb)) return 0;
+            if (isBlank(va)) return 1;
+            if (isBlank(vb)) return -1;
+            const c = typeof va === "string" ? va.localeCompare(vb, "ko") : va - vb;
+            return dir === "asc" ? c : -c;
+        };
+    }
+    function sortTh(label, key, state, attr, align = "") {
+        const on = state.key === key;
+        const aria = on ? (state.dir === "asc" ? "ascending" : "descending") : "none";
+        const icon = on ? (state.dir === "asc" ? "▲" : "▼") : "↕";
+        const hint = on ? (state.dir === "asc" ? "낮은 순" : "높은 순") : "정렬";
+        return `<th class="${align}" aria-sort="${aria}">
+    <button type="button" class="sort-btn ${on ? "on" : ""}" ${attr}="${key}" title="${hint}">${label}<span class="sort-ic" aria-hidden="true">${icon}</span></button></th>`;
+    }
+    function toggleSort(state, key, firstDir) {
+        if (state.key === key) state.dir = state.dir === "asc" ? "desc" : "asc";
+        else { state.key = key; state.dir = firstDir; }
+    }
+
+    /* 항만 표 정렬 (숫자 열은 처음 누르면 높은 순) */
+    const portSort = { key: "arrivals", dir: "desc" };
+    const PORT_COLS = [
+        { key: "name",       label: "항만",     get: (r) => r.portName || r.portCode, first: "asc" },
+        { key: "arrivals",   label: "입항",     get: (r) => r.arrivals,           first: "desc", align: "r" },
+        { key: "arrChg",     label: "7일 대비", get: (r) => r.arrivalsChgPct7d,   first: "desc", align: "r" },
+        { key: "departures", label: "출항",     get: (r) => r.departures,         first: "desc", align: "r" },
+        { key: "depChg",     label: "7일 대비", get: (r) => r.departuresChgPct7d, first: "desc", align: "r" },
+        { key: "yoy",        label: "전년 동기", get: (r) => r.arrivalsYoyPct,    first: "desc", align: "r" },
+        { key: "status",     label: "상태",     get: (r) => (r.isAnomaly ? 2 : r.isCompleteDay === false ? 1 : 0), first: "desc" },
+    ];
+
+    function renderPortTable() {
+        $("portHead").innerHTML = `<tr>${PORT_COLS.map((c) => sortTh(c.label, c.key, portSort, "data-psort", c.align)).join("")}</tr>`;
+        const q = $("portSearch").value.trim().toLowerCase();
+        const col = PORT_COLS.find((c) => c.key === portSort.key) || PORT_COLS[1];
+        const rows = dailyRows
+            .filter((r) => !q || String(r.portName ?? "").toLowerCase().includes(q) || String(r.portCode ?? "").includes(q))
+            .sort(compareBy(col.get, portSort.dir));
+        $("portCount").textContent = dailyRows.length ? `· ${rows.length}/${dailyRows.length}` : "";
+
+        if (!rows.length) {
+            $("portBody").innerHTML = `<tr><td colspan="7" class="empty">${dailyRows.length ? "검색 결과가 없습니다." : "이 날짜의 KPI가 없습니다."}</td></tr>`;
+            return;
+        }
+        const maxArr = Math.max(1, ...dailyRows.map((r) => r.arrivals ?? 0));
+        const maxDep = Math.max(1, ...dailyRows.map((r) => r.departures ?? 0));
+        const share = (v, max, cls) => `<div class="share"><span class="num">${fmtInt(v)}</span>
+      <span class="track"><span class="fill ${cls}" style="display:block;width:${((v ?? 0) / max) * 100}%"></span></span></div>`;
+        $("portBody").innerHTML = rows.map((r) => `
+    <tr class="clickable ${r.portCode === selectedPort ? "active" : ""}" data-port="${esc(r.portCode)}" tabindex="0">
+      <td><span class="port-name">${esc(r.portName || "-")}</span> <span class="tag">${esc(r.portCode)}</span></td>
+      <td class="r">${share(r.arrivals, maxArr, "")}</td>
+      <td class="r">${fmtPct(r.arrivalsChgPct7d)}</td>
+      <td class="r">${share(r.departures, maxDep, "dep")}</td>
+      <td class="r">${fmtPct(r.departuresChgPct7d)}</td>
+      <td class="r">${fmtPct(r.arrivalsYoyPct)}</td>
+      <td>${r.isAnomaly ? badge("serious", "이상징후") : r.isCompleteDay === false ? badge("muted", "수집 중") : badge("good", "정상")}</td>
+    </tr>`).join("");
+    }
+
+    /* =====================================================================
+       2. 항만 상세 (KPI + 입항/출항 선박)
+       ===================================================================== */
+    let detailData = null;
+    let detailTab = "arr";
+
+    async function loadDetail(portCode) {
+        selectedPort = portCode;
+        renderPortTable();
+        $("detailCard").hidden = false;
+        $("detailTitle").textContent = `항만 상세 · ${portCode}`;
+        $("detailBody").innerHTML = `<div class="loading">불러오는 중…</div>`;
+        try {
+            detailData = await api(API.portDetail(portCode, currentDate));
+            renderDetail();
+        } catch (e) {
+            $("detailBody").innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+        }
+        $("detailCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function renderDetail() {
+        const k = detailData?.kpi || {};
+        const arr = detailData?.arrivalShips || [];
+        const dep = detailData?.departureShips || [];
+        $("detailTitle").textContent = `항만 상세 · ${k.portName || selectedPort} (${k.portCode || selectedPort}) · ${k.kpiDate || currentDate || ""}`;
+
+        const check = (kpiVal, listLen) =>
+            kpiVal === null || kpiVal === undefined ? "" :
+                Number(kpiVal) === listLen ? `<span class="tag">목록 ${listLen}척 일치</span>`
+                    : `<span class="tag" style="color:var(--critical)">목록 ${listLen}척 · KPI와 다름</span>`;
+
+        $("detailBody").innerHTML = `
+    ${k.isAnomaly ? `<div class="anomaly-note">${badge("serious", "이상징후")} ${esc(k.anomalyReason || "")}</div>` : ""}
+    <div class="detail-grid">
+      <div class="mini"><div class="label">입항</div><div class="value num">${fmtInt(k.arrivals)}</div>${check(k.arrivals, arr.length)}</div>
+      <div class="mini"><div class="label">출항</div><div class="value num">${fmtInt(k.departures)}</div>${check(k.departures, dep.length)}</div>
+      <div class="mini"><div class="label">입항 7일 대비</div><div class="value">${fmtPct(k.arrivalsChgPct7d)}</div><span class="tag">7일 평균 ${k.arrivalsAvg7d ?? "–"}</span></div>
+      <div class="mini"><div class="label">평균 총톤수</div><div class="value num">${fmtInt(k.avgGrossTonnage)}</div><span class="tag">z-score ${k.arrivalsZscore ?? "–"}</span></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="arr" aria-selected="${detailTab === "arr"}">입항 선박 ${arr.length}</button>
+      <button class="tab" role="tab" data-tab="dep" aria-selected="${detailTab === "dep"}">출항 선박 ${dep.length}</button>
+    </div>
+    <div class="table-wrap scroll-y">${shipTable(detailTab === "arr" ? arr : dep, detailTab)}</div>`;
+    }
+
+    /* ---------- 체류 상태 판정 ----------
+       timestamp 값은 시간대 없이 오므로(KST) 브라우저 로컬 시각으로 해석합니다.
+       - 입항 전      : 입항 시각이 아직 안 옴                → "입항 예정"
+       - 경과(정박 중): 출항 시각이 없음                       → 입항 ~ 지금까지
+       - 예정        : 출항 시각이 미래 (신고된 출항 예정)       → 입항 ~ 예정 출항, 아래에 지금까지 경과
+       - 완료        : 출항 시각이 이미 지남                    → 입항 ~ 출항 (실제)                     */
+    const parseTs = (v) => (v ? new Date(String(v)) : null);
+    const minutesBetween = (a, b) => Math.max(0, Math.round((b - a) / 60000));
+
+    /* nextCall: 같은 선박의 다음 입항 항차 (히스토리처럼 알 수 있을 때만 넘김)
+       출항 기록이 없어도 그 뒤에 다른 입항이 있으면 이미 떠난 것 → "출항 미확인" */
+    function stayInfo(s, now = new Date(), nextCall = null) {
+        const arr = parseTs(s.arrivalDt), dep = parseTs(s.departureDt);
+        if (!arr || isNaN(arr)) return { kind: "none" };
+        if (arr > now) return { kind: "pre" };
+        const nextArr = parseTs(nextCall?.arrivalDt);
+        if ((!dep || isNaN(dep)) && nextArr && nextArr > arr) {
+            return { kind: "gap", minutes: minutesBetween(arr, nextArr), next: nextCall };
+        }
+        if (!dep || isNaN(dep)) return { kind: "live", minutes: minutesBetween(arr, now) };
+        if (dep > now) return { kind: "plan", minutes: s.stayMinutes ?? minutesBetween(arr, dep), elapsed: minutesBetween(arr, now) };
+        return { kind: "done", minutes: s.stayMinutes ?? minutesBetween(arr, dep) };
+    }
+
+    function stayCell(s, nextCall = null) {
+        const st = stayInfo(s, new Date(), nextCall);
+        const src = s.departureSource ? ` title="출항시각 출처: ${esc(s.departureSource)}"` : "";
+        switch (st.kind) {
+            case "gap": return `<span class="stay" title="출항 신고·관제 기록이 없지만, 이후 ${esc(st.next.portName || "다른 항만")} 입항 기록이 있어 이미 출항한 것으로 판단">
+                          <span class="stay-k gap">출항 미확인</span><span class="num">최대 ${fmtStay(st.minutes)}</span></span>
+                        <span class="stay-sub">${esc(st.next.portName || "다음 항만")} ${fmtDateTime(st.next.arrivalDt)} 입항 전 출항</span>`;
+            case "done": return `<span class="stay"${src}><span class="stay-k done">완료</span><span class="num">${fmtStay(st.minutes)}</span></span>`;
+            case "plan": return `<span class="stay"${src}><span class="stay-k plan">예정</span><span class="num">${fmtStay(st.minutes)}</span></span>
+                         <span class="stay-sub">현재 ${fmtStay(st.elapsed)} 경과</span>`;
+            case "live": return `<span class="stay"><span class="stay-k live">경과</span><span class="num">${fmtStay(st.minutes)}</span></span>
+                         <span class="stay-sub">출항 정보 없음 · 정박 중</span>`;
+            case "pre":  return `<span class="stay"><span class="stay-k pre">입항 예정</span></span>`;
+            default:     return `<span class="tag">–</span>`;
+        }
+    }
+
+    /* 선박 표 정렬·필터 (탭을 바꿔도 정렬 기준은 유지) */
+    const shipSort = { key: "time", dir: "asc" };
+    let stayFilter = null;           // null = 전체, 아니면 "done" | "plan" | "live" | "pre"
+    let shownShips = [];             // 화면에 실제로 보이는 순서 (행 클릭 시 이 배열 기준)
+
+    function shipCols(tab) {
+        const timeKey = tab === "arr" ? "arrivalDt" : "departureDt";
+        return [
+            { key: "time",     label: `${tab === "arr" ? "입항" : "출항"} 시각`, get: (s) => parseTs(s[timeKey])?.getTime(), first: "asc" },
+            { key: "name",     label: "선박명",   get: (s) => s.vesselName, first: "asc" },
+            { key: "clsgn",    label: "호출부호", get: (s) => s.clsgn, first: "asc" },
+            { key: "kind",     label: "선종",     get: (s) => s.vesselKindName || s.vesselKindCd, first: "asc" },
+            { key: "gt",       label: "총톤수",   get: (s) => (isBlank(s.grossTonnage) ? null : Number(s.grossTonnage)), first: "desc", align: "r" },
+            { key: "stay",     label: "체류",     get: (s) => stayInfo(s).minutes, first: "desc", align: "r" },
+            { key: "facility", label: "최종 시설", get: (s) => s.lastFacilityName, first: "asc" },
+            { key: "match",    label: "관제 매칭", get: (s) => s.controlMatchPriority, first: "asc" },
+        ];
+    }
+
+    function shipTable(list, tab) {
+        if (!list.length) { shownShips = []; return `<div class="empty">${tab === "arr" ? "입항" : "출항"} 선박이 없습니다.</div>`; }
+        const timeKey = tab === "arr" ? "arrivalDt" : "departureDt";
+        const cols = shipCols(tab);
+        const col = cols.find((c) => c.key === shipSort.key) || cols[0];
+        const counts = list.reduce((c, s) => (c[stayInfo(s).kind] = (c[stayInfo(s).kind] || 0) + 1, c), {});
+        shownShips = list.filter((s) => !stayFilter || stayInfo(s).kind === stayFilter).sort(compareBy(col.get, shipSort.dir));
+
+        const chip = (kind, label, text) => `
+    <button type="button" class="chip ${stayFilter === kind ? "on" : ""}" data-stay="${kind}" aria-pressed="${stayFilter === kind}">
+      <i class="stay-k ${kind}">${label}</i>${text} ${counts[kind] || 0}척</button>`;
+        return `
+    <div class="stay-legend">
+      ${chip("done", "완료", "출항 완료 · 실제 체류")}
+      ${chip("plan", "예정", "신고된 출항 예정 기준")}
+      ${chip("live", "경과", "출항 정보 없음 · 지금까지")}
+      ${counts.pre ? chip("pre", "입항 예정", "") : ""}
+      ${stayFilter ? `<button type="button" class="clear" data-stay="">전체 보기</button>` : ""}
+    </div>
+    ${shownShips.length ? "" : `<div class="empty">해당 상태의 선박이 없습니다.</div>`}
+    <table ${shownShips.length ? "" : "hidden"}>
+    <thead><tr>${cols.map((c) => sortTh(c.label, c.key, shipSort, "data-ssort", c.align)).join("")}</tr></thead>
+    <tbody>${shownShips.map((s, i) => `
+      <tr class="ship" data-ship-idx="${i}" tabindex="0" title="클릭하면 선박 히스토리">
+        <td class="num">${fmtDateTime(s[timeKey])}</td>
+        <td>${esc(s.vesselName || "-")}</td>
+        <td class="num">${esc(s.clsgn || "-")}</td>
+        <td title="${esc(s.vesselKindCd || "")}">${esc(s.vesselKindName || s.vesselKindCd || "-")}</td>
+        <td class="r num">${fmtInt(s.grossTonnage)}</td>
+        <td class="r">${stayCell(s)}</td>
+        <td>${esc(s.lastFacilityName || "-")}</td>
+        <td>${s.controlMatchPriority ? `<span class="tag">등급 ${esc(s.controlMatchPriority)}</span>` : `<span class="tag">미매칭</span>`}</td>
+      </tr>`).join("")}
+    </tbody></table>`;
+    }
+
+    /* =====================================================================
+       3. 파이프라인 실행 / 이력
+       ===================================================================== */
+    let pollTimer = null;
+
+    async function loadRuns() {
+        try {
+            const runs = await api(API.runs(10)) || [];
+            const shortDate = (d) => d ? String(d).slice(5) : "-";          // 2026-10-06 → 10-06
+            if (!runs.length) {
+                $("runsBody").innerHTML = `<tr><td colspan="5" class="empty">실행 이력이 없습니다.</td></tr>`;
+            } else {
+                $("runsBody").innerHTML = runs.map((r) => `
+        <tr title="${esc(r.errorMessage || r.runKey || "")}">
+          <td class="num tag">${esc(r.runId)}</td>
+          <td>${runBadge(r.status)}</td>
+          <td class="num">${shortDate(r.startDate)}${r.endDate && r.endDate !== r.startDate ? ` ~ ${shortDate(r.endDate)}` : ""}</td>
+          <td class="num">${fmtDateTime(r.startedAt)}<span class="when">${esc(TRIGGER_LABEL[r.triggerSource] || r.triggerSource || "")}</span></td>
+          <td>${["FAILED", "PARTIAL_SUCCESS"].includes(r.status)
+                    ? `<button class="btn ghost" style="height:28px;padding:0 8px" type="button" data-rerun="${esc(r.runId)}" data-mode="${esc(modeOf(r.pipelineName))}">재실행</button>` : ""}</td>
+        </tr>`).join("");
+            }
+            // 실행 중인 게 있으면 5초마다 다시 확인
+            const running = runs.some((r) => r.status === "RUNNING");
+            clearTimeout(pollTimer);
+            if (running) pollTimer = setTimeout(loadRuns, 5000);
+            else if (pollTimer !== null) { pollTimer = null; loadMonitoring(); loadDaily(currentDate); }
+        } catch (e) {
+            $("runsBody").innerHTML = `<tr><td colspan="5" class="error-box">${esc(e.message)}</td></tr>`;
+        }
+    }
+
+    const PIPELINE_MODE = { PORT_DATA_PIPELINE: "ALL", SHIP_CALL_PIPELINE: "SHIP_CALL", CONTROL_EVENT_PIPELINE: "CONTROL" };
+    const modeOf = (name) => PIPELINE_MODE[name] || "ALL";
+
+    async function submitRun(body) {
+        const msg = $("runMsg");
+        $("btnRun").disabled = true;
+        msg.className = "msg";
+        msg.textContent = "실행 요청 중…";
+        try {
+            const res = await api(API.runPost, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            msg.className = "msg ok";
+            msg.textContent = res?.message || "파이프라인 실행을 시작했습니다.";
+            pollTimer = setTimeout(loadRuns, 1500);      // Python이 실행 행을 만들 시간을 조금 줌
+        } catch (e) {
+            msg.className = "msg err";
+            msg.textContent = e.message;
+        } finally {
+            $("btnRun").disabled = false;
+        }
+    }
+
+    $("runForm").addEventListener("submit", (ev) => {
+        ev.preventDefault();
+        const start = $("fStart").value, end = $("fEnd").value || start;
+        const port = $("fPort").value.trim();
+        const msg = $("runMsg");
+        if (!start) { msg.className = "msg err"; msg.textContent = "시작일을 선택하세요."; return; }
+        if (end < start) { msg.className = "msg err"; msg.textContent = "종료일이 시작일보다 빠릅니다."; return; }
+        if (port && !/^\d{3}$/.test(port)) { msg.className = "msg err"; msg.textContent = "항만 코드는 숫자 3자리입니다. 예: 020"; return; }
+
+        const mode = $("fMode").value;
+        submitRun({
+            mode,
+            startDate: toCompact(start),        // 백엔드 @JsonFormat(pattern = "yyyyMMdd")
+            endDate: toCompact(end),
+            portCode: port || null,
+            dateType: mode === "CONTROL" ? null : $("fDateType").value,
+        });
+    });
+
+    $("fMode").addEventListener("change", () => { $("fDateType").disabled = $("fMode").value === "CONTROL"; });
+
+    $("runsBody").addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-rerun]");
+        if (!btn) return;
+        if (!confirm(`#${btn.dataset.rerun} 실행을 같은 조건으로 재개할까요?`)) return;
+        submitRun({ mode: btn.dataset.mode, runId: Number(btn.dataset.rerun) });
+    });
+
+    /* =====================================================================
+       4. 데이터 품질 모니터링
+       ===================================================================== */
+    async function loadMonitoring() {
+        try {
+            const m = await api(API.monitoring);
+            const s = m?.summary || {};
+            const warnings = m?.warnings || [];
+            const ok = m?.status === "OK";
+
+            $("tQuality").innerHTML = ok ? badge("good", "정상") : badge("warning", `확인 필요 ${warnings.length}건`);
+            $("tQualityMeta").textContent = s.matchPct !== null && s.matchPct !== undefined ? `관제 매칭률 ${s.matchPct}%` : " ";
+            $("monPeriod").textContent = s.firstDate ? `mart ${s.firstDate} ~ ${s.lastDate} · ${fmtInt(s.martDays)}일` : "";
+
+            const item = (label, value, sub = "") =>
+                `<div class="mini"><div class="label">${label}</div><div class="value num">${value}</div>${sub ? `<span class="tag">${sub}</span>` : ""}</div>`;
+            const same = (a, b) => (a ?? null) === (b ?? null);
+
+            $("monBody").innerHTML = `
+      <div class="detail-grid">
+        ${item("입출항 신고", fmtInt(s.shipCalls), `중복 ${fmtInt(s.duplicateRows)}건`)}
+        ${item("관제 매칭률", s.matchPct !== null && s.matchPct !== undefined ? `${s.matchPct}%` : "–", `미매칭 ${fmtInt(s.unmatchedExpected)}건`)}
+        ${item("관제 이벤트 raw → fact", `${fmtInt(s.rawEvents)} → ${fmtInt(s.factEvents)}`, same(s.rawEvents, s.factEvents) ? "일치" : "불일치")}
+        ${item("입항 합계 fact → mart", `${fmtInt(s.factArrivals)} → ${fmtInt(s.martArrivals)}`, same(s.factArrivals, s.martArrivals) ? "일치" : "불일치")}
+        ${item("mart 누락일", fmtInt(s.missingDays), "fact에는 있고 mart에 없는 날")}
+        ${item("최근 14일 이상징후", fmtInt(s.anomalies14d), "항만 × 날짜 기준")}
+      </div>
+      ${warnings.length ? `<ul class="warn-list">${warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}`;
+        } catch (e) {
+            $("tQuality").innerHTML = badge("muted", "조회 실패");
+            $("tQualityMeta").textContent = " ";
+            $("monBody").innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+        }
+    }
+
+    /* =====================================================================
+       이벤트 연결
+       ===================================================================== */
+    $("btnReload").addEventListener("click", () => loadDaily($("kpiDate").value || null));
+    $("kpiDate").addEventListener("change", () => loadDaily($("kpiDate").value || null));
+    $("btnLatest").addEventListener("click", () => { $("kpiDate").value = ""; loadDaily(null); });
+    $("btnRuns").addEventListener("click", loadRuns);
+    $("portSearch").addEventListener("input", renderPortTable);
+    $("btnCloseDetail").addEventListener("click", () => {
+        $("detailCard").hidden = true; selectedPort = null; detailData = null; renderPortTable();
+    });
+
+    $("portBody").addEventListener("click", (ev) => {
+        const tr = ev.target.closest("tr[data-port]");
+        if (tr) loadDetail(tr.dataset.port);
+    });
+    $("portBody").addEventListener("keydown", (ev) => {
+        const tr = ev.target.closest("tr[data-port]");
+        if (tr && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); loadDetail(tr.dataset.port); }
+    });
+    $("portHead").addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-psort]");
+        if (!btn) return;
+        const col = PORT_COLS.find((c) => c.key === btn.dataset.psort);
+        toggleSort(portSort, col.key, col.first);
+        renderPortTable();
+        $("portHead").querySelector(`[data-psort="${col.key}"]`)?.focus();
+    });
+
+    $("detailBody").addEventListener("click", (ev) => {
+        const tab = ev.target.closest("[data-tab]");
+        if (tab) { detailTab = tab.dataset.tab; renderDetail(); return; }
+        const sortBtn = ev.target.closest("[data-ssort]");
+        if (sortBtn) {
+            const col = shipCols(detailTab).find((c) => c.key === sortBtn.dataset.ssort);
+            toggleSort(shipSort, col.key, col.first);
+            renderDetail();
+            $("detailBody").querySelector(`[data-ssort="${col.key}"]`)?.focus();
+            return;
+        }
+        const stayBtn = ev.target.closest("[data-stay]");
+        if (stayBtn) {
+            const k = stayBtn.dataset.stay || null;
+            stayFilter = stayFilter === k ? null : k;
+            renderDetail();
+            return;
+        }
+        const row = ev.target.closest("tr[data-ship-idx]");
+        if (row) openShip(currentShipList()[Number(row.dataset.shipIdx)]);
+    });
+    $("detailBody").addEventListener("keydown", (ev) => {
+        const row = ev.target.closest("tr[data-ship-idx]");
+        if (row && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); openShip(currentShipList()[Number(row.dataset.shipIdx)]); }
+    });
+    const currentShipList = () => shownShips;   // 정렬·필터가 적용된 화면 순서
+
+    /* =====================================================================
+       5. 선박 히스토리 (드로어)
+       - 과거 입출항 이력: GET /api/ships/{clsgn}/calls
+       - 항차별 관제 타임라인: GET /api/ship-calls/{shipCallId}/events
+       ===================================================================== */
+    let drawerShip = null;        // 처음 클릭한 선박
+    let historyCalls = [];
+    let activeCallId = null;
+    let lastFocus = null;
+
+    function openShip(ship) {
+        if (!ship) return;
+        drawerShip = ship;
+        activeCallId = ship.shipCallId ?? null;
+        historyCalls = [];
+        historyLoaded = false;
+        lastFocus = document.activeElement;
+
+        $("drawerTitle").textContent = ship.vesselName || "선박 히스토리";
+        $("drawerSub").textContent = [ship.clsgn, ship.vesselKindName || ship.vesselKindCd, ship.grossTonnage ? `${fmtInt(ship.grossTonnage)} GT` : null]
+            .filter(Boolean).join(" · ");
+        $("drawer").classList.add("open");
+        $("drawer").setAttribute("aria-hidden", "false");
+        $("drawerBackdrop").classList.add("open");
+        $("btnCloseDrawer").focus();
+
+        renderDrawer();
+        loadEvents(activeCallId);
+        loadHistory(ship.clsgn);
+    }
+
+    function closeDrawer() {
+        $("drawer").classList.remove("open");
+        $("drawer").setAttribute("aria-hidden", "true");
+        $("drawerBackdrop").classList.remove("open");
+        if (lastFocus) lastFocus.focus();
+    }
+
+    /* 이 항차 바로 다음에 입항한 항차 (입항 시각 기준) */
+    function nextCallOf(call) {
+        const t = parseTs(call?.arrivalDt);
+        if (!t) return null;
+        let best = null;
+        for (const c of historyCalls) {
+            const ct = parseTs(c.arrivalDt);
+            if (ct && ct > t && (!best || ct < parseTs(best.arrivalDt))) best = c;
+        }
+        return best;
+    }
+
+    function renderDrawer() {
+        const call = historyCalls.find((c) => c.shipCallId === activeCallId) || drawerShip;
+        $("drawerBody").innerHTML = `
+    <section>
+      <h3 class="section-title">
+        <span>관제 타임라인</span>
+        <span class="card-sub">${esc(call.portName || "")} ${fmtDateTime(call.arrivalDt)} 입항</span>
+      </h3>
+      <div class="ship-meta" style="margin-bottom:14px">
+        <div class="mini"><div class="label">입항</div><div class="value num" style="font-size:15px">${fmtDateTime(call.arrivalDt)}</div></div>
+        <div class="mini"><div class="label">출항</div><div class="value num" style="font-size:15px">${fmtDateTime(call.departureDt)}</div></div>
+        <div class="mini"><div class="label">체류</div><div class="value" style="font-size:15px">${stayCell(call, nextCallOf(call))}</div></div>
+      </div>
+      <div id="eventsBox"><div class="loading">관제 이벤트 불러오는 중…</div></div>
+    </section>
+    <section>
+      <h3 class="section-title"><span>과거 입출항 이력</span><span class="card-sub" id="histCount"></span></h3>
+      <div id="historyBox"><div class="loading">불러오는 중…</div></div>
+    </section>`;
+        renderHistory();
+    }
+
+    async function loadEvents(shipCallId) {
+        const box = () => $("eventsBox");
+        if (shipCallId === null || shipCallId === undefined) {
+            box().innerHTML = `<div class="empty">항차 ID가 없어 관제 이벤트를 조회할 수 없습니다.</div>`;
+            return;
+        }
+        try {
+            const events = await api(API.callEvents(shipCallId)) || [];
+            if (activeCallId !== shipCallId || !box()) return;          // 그 사이 다른 항차를 눌렀으면 무시
+            box().innerHTML = renderTimeline(events);
+        } catch (e) {
+            if (box()) box().innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+        }
+    }
+
+    function renderTimeline(events) {
+        if (!events.length) {
+            return `<div class="empty">관제 기록이 없습니다.<br><span class="tag">관제 대상이 아니거나, 신고와 관제가 매칭되지 않은 항차입니다.</span></div>`;
+        }
+        const LONG_WAIT = 6 * 60;   // 6시간 넘는 구간은 강조
+        return `<ol class="timeline">${events.map((e, i) => {
+            const last = i === events.length - 1;
+            const cls = [i === 0 ? "first" : "", last ? "last" : "", last && !/출항/.test(e.eventName || "") ? "open-end" : ""].join(" ");
+            const gap = e.minutesToNext !== null && e.minutesToNext !== undefined
+                ? `<span class="tl-gap ${e.minutesToNext >= LONG_WAIT ? "long" : ""}">↓ ${fmtStay(e.minutesToNext)}</span>` : "";
+            return `
+      <li class="${cls}">
+        <span class="tl-dot" aria-hidden="true"></span>
+        <div class="tl-main">
+          <span class="tl-name">${esc(e.eventName || e.eventCode || "이벤트")}</span>
+          <span class="tl-time num">${fmtDateTime(e.eventDt)}</span>
+        </div>
+        <div class="tl-fac">${esc(e.facilityName || "")}</div>
+        ${gap || (last ? `<span class="tl-gap">${/출항/.test(e.eventName || "") ? "관제 종료" : "진행 중"}</span>` : "")}
+      </li>`;
+        }).join("")}</ol>`;
+    }
+
+    async function loadHistory(clsgn) {
+        if (!clsgn) {
+            historyCalls = [];
+            if ($("historyBox")) $("historyBox").innerHTML = `<div class="empty">호출부호가 없어 이력을 조회할 수 없습니다.</div>`;
+            return;
+        }
+        try {
+            historyCalls = await api(API.shipCalls(clsgn, 20)) || [];
+            if (drawerShip?.clsgn !== clsgn) return;
+            historyLoaded = true;
+            renderHistory();
+        } catch (e) {
+            if ($("historyBox")) $("historyBox").innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+        }
+    }
+
+    let historyLoaded = false;
+    function renderHistory() {
+        const box = $("historyBox");
+        if (!box || !historyLoaded) return;
+        if (!historyCalls.length) { box.innerHTML = `<div class="empty">이력이 없습니다.</div>`; return; }
+        $("histCount").textContent = `최근 ${historyCalls.length}건`;
+        box.innerHTML = `
+    <div class="table-wrap"><table class="hist">
+      <thead><tr><th>항만</th><th>입항</th><th>출항</th><th class="r">체류</th></tr></thead>
+      <tbody>${historyCalls.map((c) => `
+        <tr class="clickable ${c.shipCallId === activeCallId ? "active" : ""}" data-call="${esc(c.shipCallId)}" tabindex="0">
+          <td>${esc(c.portName || c.portCode || "-")}</td>
+          <td class="num">${fmtDateTime(c.arrivalDt)}</td>
+          <td class="num">${fmtDateTime(c.departureDt)}</td>
+          <td class="r">${stayCell(c, nextCallOf(c))}</td>
+        </tr>`).join("")}
+      </tbody></table></div>`;
+    }
+
+    function selectCall(id) {
+        activeCallId = id;
+        renderDrawer();
+        loadEvents(id);
+    }
+
+    $("drawerBody").addEventListener("click", (ev) => {
+        const tr = ev.target.closest("tr[data-call]");
+        if (tr) selectCall(Number(tr.dataset.call));
+    });
+    $("drawerBody").addEventListener("keydown", (ev) => {
+        const tr = ev.target.closest("tr[data-call]");
+        if (tr && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); selectCall(Number(tr.dataset.call)); }
+    });
+    $("btnCloseDrawer").addEventListener("click", closeDrawer);
+    $("drawerBackdrop").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && $("drawer").classList.contains("open")) closeDrawer(); });
+
+    /* 차트: 클릭하면 상세, 올리면 툴팁 */
+    const tip = $("tooltip");
+    $("chart").addEventListener("click", (ev) => {
+        const bar = ev.target.closest("[data-port]");
+        if (bar) loadDetail(bar.dataset.port);
+    });
+    $("chart").addEventListener("mousemove", (ev) => {
+        const bar = ev.target.closest("[data-tip]");
+        if (!bar) { tip.classList.remove("show"); return; }
+        tip.textContent = bar.dataset.tip;
+        const x = Math.min(ev.clientX + 12, window.innerWidth - tip.offsetWidth - 8);
+        tip.style.left = `${x}px`;
+        tip.style.top = `${ev.clientY + 14}px`;
+        tip.classList.add("show");
+    });
+    $("chart").addEventListener("mouseleave", () => tip.classList.remove("show"));
+
+    /* 초기 값: 파이프라인 폼은 어제 날짜 */
+    (function init() {
+        const d = new Date(); d.setDate(d.getDate() - 1);
+        const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        $("fStart").value = yesterday;
+        $("fEnd").value = yesterday;
+        loadDaily(null);
+        loadRuns();
+        loadMonitoring();
+    })();
+</script>
+</body>
+</html>

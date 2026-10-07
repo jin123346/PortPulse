@@ -27,7 +27,6 @@ public class DashboardController {
     public PortDailyDetailResponse getPortDailyDetail(
             @PathVariable("portCode") String portCode,
             @RequestParam(name="date",required = false)
-            @DateTimeFormat(iso=DateTimeFormat.ISO.DATE)
             LocalDate date
     ){
         return dashboardService.getPortDailyDetail(portCode,date);
