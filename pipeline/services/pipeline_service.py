@@ -26,6 +26,7 @@ def run_pipeline(
     end_date:str,
     date_type: str,
     num_of_rows: int,
+    trigger: str,
     port_code: str | None = None,
     run_id=None
 ):
@@ -38,7 +39,8 @@ def run_pipeline(
         run_id,run_key = create_pipeline_run(
             pipeline_name=pipeline_name,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            trigger=trigger
         )
     else:
         pipeline_run = get_pipeline_run(run_id)
@@ -107,7 +109,6 @@ def run_pipeline(
         
         save_pipeline_report(
             report=report,
-            run_key=run_key
         )
         
 
@@ -132,8 +133,8 @@ def run_pipeline(
                 "error_message": error_message
             }
             save_pipeline_report(
-                report=report,
-                run_key=run_key
+                report=report
+
             )
             logger.warning("사용자 중단 - run_id=%s", run_id)
             
@@ -158,8 +159,7 @@ def run_pipeline(
         }
 
         save_pipeline_report(
-            report=report,
-            run_key=run_key
+            report=report
         )
         raise
 

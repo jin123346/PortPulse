@@ -22,6 +22,9 @@ CREATE TABLE audit.pipeline_run (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+alter table audit.pipeline_run
+add column trigger_source varchar(200);
+
 
 ALTER TABLE audit.api_request
 ADD CONSTRAINT fk_api_request_pipeline_run

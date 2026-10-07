@@ -15,11 +15,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  logging:
-    lever:
-      root: INFO
-      com.portpulse: DEBUG
-    file:
-      name: logs/portpulse.log
+logging:
+  lever:
+    root: INFO
+    com.portpulse: DEBUG
+  file:
+    name: logs/portpulse.log
 
-server: 8080
+server:
+  port: 8081
+
+portpulse:
+  pipeline:
+    python-path:pipeline/.venv/Scripts/python.exe
+    working-dir:pipeline

@@ -128,6 +128,18 @@ Port Pulse - 항만 데이터 수집 파이프라인
             """
     )
 
+    parser.add_argument(
+        "--trigger-source",
+        type=str,
+        default="AIRFLOW",
+        help="""
+            MANUAL_CLI: 터미널에서 직접 실행
+            DASHBOARD: Java API로 실행
+            AIRFLOW: 스케줄 실행
+            """
+    )
+
+
     return parser.parse_args()
 
 
@@ -142,7 +154,8 @@ def main():
             date_type=args.date_type,
             num_of_rows=args.num_of_rows,
             port_code=args.port_code,
-            run_id=args.run_id
+            run_id=args.run_id,
+            trigger= args.trigger_source
         )
         save_pipeline_report(report)
 

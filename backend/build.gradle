@@ -35,6 +35,10 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
+tasks.named('bootRun') {
+    workingDir = rootProject.projectDir
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }

@@ -153,6 +153,17 @@ ON CONFLICT (port_id, prt_ag_cd) DO UPDATE
 SET mapping_type = EXCLUDED.mapping_type,
     note         = EXCLUDED.note;
 
+
+ALTER TABLE master.dim_mof_port_code
+    ADD COLUMN region_key varchar(100)
+    GENERATED ALWAYS AS (
+        CASE
+            WHEN region_name IS NULL OR region_name = '기타' THEN prt_ag_cd
+            ELSE regexp_replace(region_name, '권$', '')
+        END
+    ) STORED;
+
+    
 INSERT INTO master.bridge_port_mof_code
     (port_id, prt_ag_cd, mapping_type, note)
 SELECT

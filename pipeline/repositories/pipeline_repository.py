@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 def create_pipeline_run(
     pipeline_name : str,
     start_date : str,
-    end_date : str
+    end_date : str,
+    trigger: str
 ):
     conn = get_connection()
     
@@ -28,12 +29,14 @@ def create_pipeline_run(
                     run_key,
                     start_date,
                     end_date,
+                    trigger,
                     status
                 )
                 SELECT
                     run_id,
                     %s,
                     %s || '_' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '_' || run_id,
+                    %s,
                     %s,
                     %s,
                     'RUNNING'
@@ -49,7 +52,8 @@ def create_pipeline_run(
                     pipeline_name,
                     pipeline_name,
                     start_date,
-                    end_date
+                    end_date,
+                    trigger
                 )
             )
 

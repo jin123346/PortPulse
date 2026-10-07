@@ -24,7 +24,7 @@ def get_monitoring_summary() -> dict:
     conn= get_connection()
     try:
         with conn.cursor() as cur:
-            cur.excute(sql)
+            cur.execute(sql)
             row=cur.fetchone()
             colums = [d[0] for d in cur.description]
 
