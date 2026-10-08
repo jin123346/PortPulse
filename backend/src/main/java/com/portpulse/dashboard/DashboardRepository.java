@@ -64,6 +64,38 @@ public class DashboardRepository {
     private static final String FIND_LATEST_COMPLETE_DATE_SQL= """
                 select max(kpi_date) from mart.port_daily_kpi pdk
             """;
+
+    private static final String FIND_HOURLY_KPI_SQL= """
+            WITH calls AS (
+                SELECT fsc.ship_call_id,
+                       fsc.arrival_dt,
+                       COALESCE(fsc.departure_dt, nx.arrival_dt) AS leave_dt   -- 출항, 없으면 다음 입항
+                FROM fact.fact_ship_call fsc
+                LEFT JOIN LATERAL (
+                    SELECT n.arrival_dt
+                    FROM fact.fact_ship_call n
+                    WHERE n.clsgn = fsc.clsgn
+                      AND n.arrival_dt > fsc.arrival_dt
+                    ORDER BY n.arrival_dt
+                    LIMIT 1
+                ) nx ON true
+                WHERE fsc.port_code = :portCode
+                  AND fsc.arrival_dt <  CAST(:day AS timestamp) + interval '1 day'
+                  AND fsc.arrival_dt >= CAST(:day AS timestamp) - interval '30 day'
+                  -- AND 대표 신고만 (중복 제외 조건)
+            )
+            SELECT h.hour_ts,
+                   count(c.ship_call_id) FILTER (WHERE c.leave_dt IS NOT NULL) AS ships,
+                   count(c.ship_call_id) FILTER (WHERE c.leave_dt IS NULL)     AS unknown_departure
+            FROM generate_series(CAST(:day AS timestamp),
+                                 CAST(:day AS timestamp) + interval '23 hour',
+                                 interval '1 hour') AS h(hour_ts)
+            LEFT JOIN calls c
+                   ON c.arrival_dt <= h.hour_ts
+                  AND (c.leave_dt IS NULL OR c.leave_dt > h.hour_ts)
+            GROUP BY h.hour_ts
+            ORDER BY h.hour_ts;
+            """;
     public List<DailyKpiResponse> findDailyKpiByDate(LocalDate kpiDate){
         return jdbcClient.sql(FIND_DAILY_KPI_SQL)
                 .param("kpiDate",kpiDate)
@@ -87,6 +119,16 @@ public class DashboardRepository {
                 .optional();
 
     }
+
+    public List<HourlyOccupancyResponse> findHourlyKpiByPortAndDate(String portCode, LocalDate date){
+        return jdbcClient.sql(FIND_HOURLY_KPI_SQL)
+                .param("portCode",portCode)
+                .param("day",date)
+                .query(HourlyOccupancyResponse.class)
+                .list();
+
+    }
+
 
 
 

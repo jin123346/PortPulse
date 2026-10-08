@@ -15,7 +15,7 @@ services:
       - portpulse-postgres-data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL","pg_isready -u port5432 -d portpulse"]
+      test: ["CMD-SHELL","pg_isready -U port5432 -d portpulse"]
       interval: 10s
       timeout: 5s
       retries: 5

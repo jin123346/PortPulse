@@ -37,6 +37,11 @@ public class DashboardService {
         return new PortDailyDetailResponse(kpi,arrivals,departures);
     }
 
+    public List<HourlyOccupancyResponse> getPortHourlyDetail(String portCode, LocalDate kpiDate){
+        LocalDate targetDate = resolveDate(kpiDate);
+        return  dashboardRepository.findHourlyKpiByPortAndDate(portCode,targetDate);
+    }
+
 
     public LocalDate resolveDate(LocalDate date){
         if (date != null){

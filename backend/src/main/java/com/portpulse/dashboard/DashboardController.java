@@ -32,5 +32,14 @@ public class DashboardController {
         return dashboardService.getPortDailyDetail(portCode,date);
     }
 
+    @GetMapping("/{portCode}/hourly")
+    public List<HourlyOccupancyResponse>  getPortHourlyDetail(
+            @PathVariable("portCode") String portCode,
+            @RequestParam(name="date",required = false)
+            LocalDate date
+    ){
+        return dashboardService.getPortHourlyDetail(portCode,date);
+    }
+
 
 }
