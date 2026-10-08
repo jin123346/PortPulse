@@ -39,6 +39,5 @@ def port_pulse_daily():
        )
     )
 
-
 port_pulse_daily()
 

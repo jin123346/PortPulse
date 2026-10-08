@@ -96,3 +96,11 @@ desktop.ini
 .coverage
 coverage.xml
 htmlcov/
+
+airflow/.env
+airflow/logs/
+airflow/plugins/
+airflow/config/
+**/__pycache__/
+*.broken.bak
+pycache_backup*/

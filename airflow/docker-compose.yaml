@@ -90,6 +90,7 @@ x-airflow-common:
     postgres:
       condition: service_healthy
 
+
 services:
   postgres:
     image: postgres:16
